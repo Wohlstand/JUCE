@@ -480,6 +480,10 @@ public:
                 if (parentContainer->isOnDesktop())
                     parentContainer->removeFromDesktop();
             }
+
+            filter->editorBeingDeleted (editor.get());
+            editor = nullptr;
+            parentContainer = nullptr;
         }
     }
 
@@ -563,6 +567,9 @@ public:
         }
         else
         {
+            if (editor == nullptr)
+                editor = std::unique_ptr<AudioProcessorEditor>(filter->createEditorIfNeeded());
+
             resetParentUI (features);
             *widget = parentContainer->getWindowHandle();
         }
