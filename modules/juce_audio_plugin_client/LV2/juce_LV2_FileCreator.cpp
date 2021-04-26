@@ -362,7 +362,7 @@ class JuceLV2FileCreator
 
         // Parameters
         OwnedArray<Lv2ParameterWrapper> parameters = wrapParameters (filter);
-        const OwnedArray<AudioProcessorParameter> &rawParams = filter->getParameters();
+        const Array<AudioProcessorParameter *> &rawParams = filter->getParameters();
         for (int i=0; i < parameters.size(); ++i)
         {
             if (i == 0)
@@ -463,7 +463,7 @@ class JuceLV2FileCreator
             preset += "<" + pluginURI + presetSeparator + "preset" + String::formatted("%03i", i+1) + "> a pset:Preset ;\n";
 
             // State
-            const OwnedArray<AudioProcessorParameter>& rawParams = filter->getParameters();
+            const Array<AudioProcessorParameter *> &rawParams = filter->getParameters();
 #if JucePlugin_WantsLV2State
             preset += "    state:state [\n";
 #if JucePlugin_WantsLV2StateString
@@ -527,30 +527,30 @@ public:
     static void createLv2Files(const char* basename)
     {
         const ScopedJuceInitialiser_GUI juceInitialiser;
-        ScopedPointer<AudioProcessor> filter(createPluginFilterOfType (AudioProcessor::wrapperType_LV2));
+        std::unique_ptr<AudioProcessor> filter(createPluginFilterOfType (AudioProcessor::wrapperType_LV2));
 
         int maxNumInputChannels, maxNumOutputChannels;
-        findMaxTotalChannels(filter, maxNumInputChannels, maxNumOutputChannels);
+        findMaxTotalChannels(filter.get(), maxNumInputChannels, maxNumOutputChannels);
 
         String binary(basename);
         String binaryTTL(binary + ".ttl");
 
         std::cout << "Writing manifest.ttl..."; std::cout.flush();
         std::fstream manifest("manifest.ttl", std::ios::out);
-        manifest << makeManifestFile(filter, binary) << std::endl;
+        manifest << makeManifestFile(filter.get(), binary) << std::endl;
         manifest.close();
         std::cout << " done!" << std::endl;
 
         std::cout << "Writing " << binary << ".ttl..."; std::cout.flush();
         std::fstream plugin(binaryTTL.toUTF8(), std::ios::out);
-        plugin << makePluginFile(filter, maxNumInputChannels, maxNumOutputChannels) << std::endl;
+        plugin << makePluginFile(filter.get(), maxNumInputChannels, maxNumOutputChannels) << std::endl;
         plugin.close();
         std::cout << " done!" << std::endl;
 
 #if JucePlugin_WantsLV2Presets
         std::cout << "Writing presets.ttl..."; std::cout.flush();
         std::fstream presets("presets.ttl", std::ios::out);
-        presets << makePresetsFile(filter) << std::endl;
+        presets << makePresetsFile(filter.get()) << std::endl;
         presets.close();
         std::cout << " done!" << std::endl;
 #endif

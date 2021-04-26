@@ -38,7 +38,7 @@
 #endif
 
 #if JUCE_LINUX && ! JUCE_AUDIOPROCESSOR_NO_GUI
- #include <X11/Xlib.h>
+ #define JUCE_GUI_BASICS_INCLUDE_XHEADERS 1
  #undef KeyPress
 #endif
 
@@ -301,7 +301,8 @@ public:
         const int ch = child->getHeight();
 
 #if JUCE_LINUX
-        XResizeWindow (display.display, (Window) getWindowHandle(), cw, ch);
+        ::Display* display = XWindowSystem::getInstance ()->getDisplay ();
+        XResizeWindow (display, (Window) getWindowHandle(), cw, ch);
 #else
         setSize (cw, ch);
 #endif
@@ -321,9 +322,6 @@ public:
 private:
     //==============================================================================
     const LV2UI_Resize* uiResize;
-#if JUCE_LINUX
-    ScopedXDisplay display;
-#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceLv2ParentContainer);
 };
@@ -361,7 +359,7 @@ public:
 
         if (filter->hasEditor())
         {
-            editor = filter->createEditorIfNeeded();
+            editor.reset(filter->createEditorIfNeeded());
 
             if (editor == nullptr)
             {
@@ -390,8 +388,8 @@ public:
                 if (externalUIHost->plugin_human_id != nullptr)
                     title = externalUIHost->plugin_human_id;
 
-                externalUI = new JuceLv2ExternalUIWrapper (editor, title);
-                *widget = externalUI;
+                externalUI.reset(new JuceLv2ExternalUIWrapper (editor.get(), title));
+                *widget = externalUI.get();
                 startTimer (100);
             }
             else
@@ -441,7 +439,7 @@ public:
 
         if (editor != nullptr)
         {
-            filter->editorBeingDeleted (editor);
+            filter->editorBeingDeleted (editor.get());
             editor = nullptr;
         }
     }
@@ -494,7 +492,7 @@ public:
         }
     }
 
-    void audioProcessorChanged (AudioProcessor*)
+    void audioProcessorChanged (AudioProcessor*, const ChangeDetails&)
     {
         if (filter != nullptr && programsHost != nullptr)
         {
@@ -559,7 +557,7 @@ public:
         if (isExternal)
         {
             resetExternalUI (features);
-            *widget = externalUI;
+            *widget = externalUI.get();
         }
         else
         {
@@ -584,7 +582,7 @@ public:
 
 private:
     AudioProcessor* const filter;
-    ScopedPointer<AudioProcessorEditor> editor;
+    std::unique_ptr<AudioProcessorEditor> editor;
     bool isListening;
 
     LV2UI_Write_Function writeFunction;
@@ -599,16 +597,12 @@ private:
     const LV2UI_Touch* uiTouch;
     const LV2_Programs_Host* programsHost;
 
-    ScopedPointer<JuceLv2ExternalUIWrapper> externalUI;
+    std::unique_ptr<JuceLv2ExternalUIWrapper> externalUI;
     const LV2_External_UI_Host* externalUIHost;
     Point<int> lastExternalUIPos;
 
-    ScopedPointer<JuceLv2ParentContainer> parentContainer;
+    std::unique_ptr<JuceLv2ParentContainer> parentContainer;
     const LV2UI_Resize* uiResize;
-
-#if JUCE_LINUX
-    ScopedXDisplay display;
-#endif
 
     //==============================================================================
     void resetExternalUI (const LV2_Feature* const* features)
@@ -656,7 +650,7 @@ private:
         if (parent != nullptr)
         {
             if (parentContainer == nullptr)
-                parentContainer = new JuceLv2ParentContainer (editor, uiResize);
+                parentContainer.reset(new JuceLv2ParentContainer (editor.get(), uiResize));
 
             parentContainer->setVisible (false);
 
@@ -668,7 +662,8 @@ private:
 #if JUCE_LINUX
             Window hostWindow = (Window) parent;
             Window editorWnd  = (Window) parentContainer->getWindowHandle();
-            XReparentWindow (display.display, editorWnd, hostWindow, 0, 0);
+            ::Display* display = XWindowSystem::getInstance ()->getDisplay ();
+            XReparentWindow (display, editorWnd, hostWindow, 0, 0);
 #endif
 
             parentContainer->reset (uiResize);
@@ -715,7 +710,7 @@ public:
     {
         {
             const MessageManagerLock mmLock;
-            filter = createPluginFilterOfType (AudioProcessor::wrapperType_LV2);
+            filter.reset(createPluginFilterOfType (AudioProcessor::wrapperType_LV2));
         }
         jassert (filter != nullptr);
 
@@ -740,7 +735,7 @@ public:
         portLatency = nullptr;
 #endif
 
-        parameters = wrapParameters (filter);
+        parameters = wrapParameters (filter.get());
 
         portAudioIns.insertMultiple (0, nullptr, numInChans);
         portAudioOuts.insertMultiple (0, nullptr, numOutChans);
@@ -1484,9 +1479,9 @@ public:
         if (ui != nullptr)
             ui->resetIfNeeded (writeFunction, controller, widget, features);
         else
-            ui = new JuceLv2UIWrapper (filter, writeFunction, controller, widget, features, isExternal);
+            ui.reset(new JuceLv2UIWrapper (filter.get(), writeFunction, controller, widget, features, isExternal));
 
-        return ui;
+        return ui.get();
     }
 #endif
 
@@ -1497,9 +1492,9 @@ private:
     SharedResourcePointer<ScopedJuceInitialiser_GUI> sharedJuceGUI;
 #endif
 
-    ScopedPointer<AudioProcessor> filter;
+    std::unique_ptr<AudioProcessor> filter;
 #if ! JUCE_AUDIOPROCESSOR_NO_GUI
-    ScopedPointer<JuceLv2UIWrapper> ui;
+    std::unique_ptr<JuceLv2UIWrapper> ui;
 #endif
     HeapBlock<float*> channels;
     MidiBuffer midiEvents;
