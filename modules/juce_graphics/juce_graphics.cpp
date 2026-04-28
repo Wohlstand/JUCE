@@ -48,11 +48,6 @@
   // get rid of some warnings in Window's own headers
  JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4458)
 
- #if JUCE_MINGW && JUCE_USE_DIRECTWRITE
-  #warning "DirectWrite not currently implemented with mingw..."
-  #undef JUCE_USE_DIRECTWRITE
- #endif
-
  #if JUCE_USE_DIRECTWRITE || JUCE_DIRECT2D
   /* If you hit a compile error trying to include these files, you may need to update
      your version of the Windows SDK to the latest one. The DirectWrite and Direct2D

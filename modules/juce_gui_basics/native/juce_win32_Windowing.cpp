@@ -4273,6 +4273,7 @@ bool offerKeyMessageToJUCEWindow (MSG& m)   { return HWNDComponentPeer::offerKey
 //==============================================================================
 bool JUCE_CALLTYPE Process::isForegroundProcess()
 {
+#if 0
     if (auto fg = GetForegroundWindow())
     {
         DWORD processID = 0;
@@ -4280,6 +4281,7 @@ bool JUCE_CALLTYPE Process::isForegroundProcess()
 
         return processID == GetCurrentProcessId();
     }
+#endif
 
     return true;
 }

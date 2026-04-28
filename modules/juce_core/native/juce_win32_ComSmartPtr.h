@@ -23,22 +23,20 @@
 namespace juce
 {
 
-#if JUCE_MINGW || (! (defined (_MSC_VER) || defined (__uuidof)))
- #ifdef __uuidof
-  #undef __uuidof
- #endif
-
- template <typename Type> struct UUIDGetter { static CLSID get() { jassertfalse; return {}; } };
- #define __uuidof(x)  UUIDGetter<x>::get()
-
- template <>
- struct UUIDGetter<::IUnknown>
- {
-     static CLSID get()     { return { 0, 0, 0, { 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 } }; }
- };
-
- #define JUCE_DECLARE_UUID_GETTER(name, uuid) \
-    template <> struct UUIDGetter<name> { static CLSID get()  { return uuidFromString (uuid); } };
+#if JUCE_MINGW
+    template <class T> const GUID& juce_uuidof();
+}
+template <class T> const GUID& __mingw_uuidof()
+{
+    return juce::juce_uuidof<T>();
+}
+namespace juce {
+  #define JUCE_DECLARE_UUID_GETTER(name, uuid) \
+    template<> const GUID& juce_uuidof<name>() \
+    { \
+        static const CLSID id = uuidFromString (uuid); \
+        return id; \
+    };
 
  #define JUCE_COMCLASS(name, guid) \
     struct name; \

@@ -88,6 +88,11 @@
    #pragma comment (lib, "D2d1.lib")
   #endif
  #endif
+
+ #if JUCE_MINGW
+   // NOTE(jpc): Windows API which might be missing from system headers
+   LWSTDAPI IUnknown_GetWindow(IUnknown* unk, HWND* phwnd);
+ #endif
 #endif
 
 #include <set>
